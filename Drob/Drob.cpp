@@ -6,8 +6,45 @@
 #include <sstream>
 #include <stdexcept>
 #include <cmath>
+#include <vector>
+#include <fstream>
 
 using namespace std;
+
+class HistoryManager {
+private:
+    static vector<string> history; //static vector to save history
+
+public:
+    //add to history
+    static void addToHistory(const string& entry) {
+        history.push_back(entry);
+    }
+
+    //output in console
+    static void displayHistory() {
+        cout << "Operations history:\n";
+        for (size_t i = 0; i < history.size(); ++i) {
+            cout << "[" << i + 1 << "]" << history[i] << endl; 
+        }
+    }
+
+    //save history to file
+    static void saveToFile(const string& filename) {
+        ofstream file(filename);
+        if (!file) {
+            cerr << "Error while opening the file!" << endl;
+            return; 
+        }
+        for (const auto& entry : history) {
+            file << entry << endl;
+        }
+        file.close();
+        cout << "History is saved in " << filename << endl;
+    }
+};
+
+vector<string> HistoryManager::history;
 
 class Fraction {
 private:
@@ -45,19 +82,32 @@ public:
     Fraction add(const Fraction& other) const {
         int new_num = numerator * other.denominator + other.numerator * denominator;
         int new_den = denominator * other.denominator;
-        return Fraction(new_num, new_den);
+        Fraction result(new_num, new_den);
+        HistoryManager::addToHistory(
+            toString() + " + " + other.toString() + " = " + result.toString()
+        );
+        return result;
     }
 
     Fraction substract(const Fraction& other) const {
         int new_num = numerator * other.denominator - other.numerator * denominator;
         int new_den = denominator * other.denominator;
-        return Fraction(new_num, new_den);
+        Fraction result(new_num, new_den);
+        HistoryManager::addToHistory(
+            toString() + " - " + other.toString() + " = " + result.toString()
+        );
+        return result;
     }
 
     Fraction multiply(const Fraction& other) const {
         int new_num = numerator * other.numerator;
         int new_den = denominator * other.denominator;
-        return Fraction(new_num, new_den);
+        Fraction result(new_num, new_den);
+        HistoryManager::addToHistory(
+            toString() + " * " + other.toString() + " = " + result.toString()
+        );
+        return result;
+
     }
 
     Fraction divide(const Fraction& other) const {
@@ -66,11 +116,21 @@ public:
         }
         int new_num = numerator * other.denominator;
         int new_den = denominator * other.numerator;
-        return Fraction(new_num, new_den);
+        Fraction result(new_num, new_den);
+        HistoryManager::addToHistory(
+            toString() + " / " + other.toString() + " = " + result.toString()
+        );
+        return result;
     }
 
     double toDecimal() const {
         return static_cast<double>(numerator) / denominator;
+    }
+
+    string toString() const {
+        ostringstream oss;
+        oss << *this;
+        return oss.str();
     }
 
     Fraction operator+(const Fraction& other) const { return add(other); }
@@ -110,25 +170,15 @@ public:
 
 int main()
 {
-    try {
-        Fraction a(3, 4);
-        Fraction b(2, 5);
+    Fraction a(1, 2);
+    Fraction b(1, 2);
 
-        cout << "a + b = " << a + b << endl;
-        cout << "a - b = " << a - b << endl;
-        cout << "a * b = " << a * b << endl;
-        cout << "a / b = " << a / b << endl;
+    Fraction c = a + b;
+    Fraction d = a * b;
 
-        Fraction c;
-        cout << "Enter fraction (format a/b): ";
-        cin >> c;
-        cout << "You entered: " << c << endl;
-        cout << "Decimal: " << c.toDecimal() << endl;
+    HistoryManager::displayHistory();
+    HistoryManager::saveToFile("operations_history.txt");
 
-    }
-    catch (const exception& e) {
-        cerr << "Error: " << e.what() << endl;
-    }
     return 0;
 }
 
