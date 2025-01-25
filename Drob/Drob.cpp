@@ -8,42 +8,40 @@
 #include <limits>
 #include <fstream>
 
-using namespace std;
-
 class HistoryManager {
 private:
-    static vector<string> history; //static vector to save history
+    static std::vector<std::string> history; //static vector to save history
 
 public:
     //add to history
-    static void addToHistory(const string& entry) {
+    static void addToHistory(const std::string& entry) {
         history.push_back(entry);
     }
 
     //output in console
     static void displayHistory() {
-        cout << "Operations history:\n";
+        std::cout << "Operations history:\n";
         for (size_t i = 0; i < history.size(); ++i) {
-            cout << "[" << i + 1 << "]" << history[i] << endl; 
+            std::cout << "[" << i + 1 << "]" << history.at(i) << std::endl;
         }
     }
 
     //save history to file
-    static void saveToFile(const string& filename) {
-        ofstream file(filename);
+    static void saveToFile(const std::string& filename) {
+        std::ofstream file(filename);
         if (!file) {
-            cerr << "Error while opening the file!" << endl;
+            std::cerr << "Error while opening the file: " << filename << std::endl;
             return; 
         }
         for (const auto& entry : history) {
-            file << entry << endl;
+            file << entry << std::endl;
         }
         file.close();
-        cout << "History is saved in " << filename << endl;
+        std::cout << "History is saved in " << filename << std::endl;
     }
 };
 
-vector<string> HistoryManager::history;
+std::vector<std::string> HistoryManager::history;
 
 class Fraction {
 private:
@@ -51,7 +49,7 @@ private:
     int denominator;
 
     void simplify() {
-        int common = gcd(abs(numerator), abs(denominator));
+        int common = gcd(std::abs(numerator), std::abs(denominator));
         numerator /= common;
         denominator /= common;
 
@@ -73,7 +71,7 @@ private:
 public:
     Fraction(int num = 0, int den = 1) : numerator(num), denominator(den) {
         if (denominator == 0) {
-            throw invalid_argument("Denominator cannot be zero");
+            throw std::invalid_argument("Denominator cannot be zero");
         }
         simplify();
     }
@@ -88,7 +86,7 @@ public:
         return result;
     }
 
-    Fraction substract(const Fraction& other) const {
+    Fraction subtract(const Fraction& other) const {
         int new_num = numerator * other.denominator - other.numerator * denominator;
         int new_den = denominator * other.denominator;
         Fraction result(new_num, new_den);
@@ -111,7 +109,7 @@ public:
 
     Fraction divide(const Fraction& other) const {
         if (other.numerator == 0) {
-            throw invalid_argument("Cannot divide by zero");
+            throw std::invalid_argument("Cannot divide by zero");
         }
         int new_num = numerator * other.denominator;
         int new_den = denominator * other.numerator;
@@ -126,41 +124,41 @@ public:
         return static_cast<double>(numerator) / denominator;
     }
 
-    string toString() const {
-        ostringstream oss;
+    std::string toString() const {
+        std::ostringstream oss;
         oss << *this;
         return oss.str();
     }
 
     Fraction operator+(const Fraction& other) const { return add(other); }
-    Fraction operator-(const Fraction& other) const { return substract(other); }
+    Fraction operator-(const Fraction& other) const { return subtract(other); }
     Fraction operator*(const Fraction& other) const { return multiply(other); }
     Fraction operator/(const Fraction& other) const { return divide(other); }
 
-    friend ostream& operator<<(ostream& os, const Fraction& f) {
+    friend std::ostream& operator<<(std::ostream& os, const Fraction& f) {
         os << f.numerator;
         if (f.denominator != 1) os << "/" << f.denominator;
         return os;
     }
 
-    friend istream& operator>>(istream& is, Fraction& f) {
-        string input;
+    friend std::istream& operator>>(std::istream& is, Fraction& f) {
+        std::string input;
         is >> input;
 
         size_t slashPos = input.find('/');
-        if (slashPos != string::npos) {
-            int num = stoi(input.substr(0, slashPos));
-            int den = stoi(input.substr(slashPos + 1));
+        if (slashPos != std::string::npos) {
+            int num = std::stoi(input.substr(0, slashPos));
+            int den = std::stoi(input.substr(slashPos + 1));
             f = Fraction(num, den);
         }
         else {
             try {
-                int num = stoi(input);
+                int num = std:: stoi(input);
                 f = Fraction(num, 1);
             }
             catch (...) {
                 f = Fraction(0, 1);
-                is.setstate(ios::failbit);
+                is.setstate(std::ios::failbit);
             }
         }
         return is;
@@ -168,9 +166,9 @@ public:
 };
 
 //helping functions for parsing
-vector<string> tokenize(const string& expression) {
-    vector<string> tokens;
-    string token;
+std::vector<std::string> tokenize(const std::string& expression) {
+    std::vector<std::string> tokens;
+    std::string token;
     bool readingNumber = false;
     for (size_t i = 0; i < expression.size(); ++i) {
         char c = expression[i];
@@ -187,7 +185,7 @@ vector<string> tokenize(const string& expression) {
                 readingNumber = false;
             }
             if (!isspace(c)) {
-                tokens.push_back(string(1, c));
+                tokens.push_back(std::string(1, c));
             }
         }
     }
@@ -199,12 +197,12 @@ vector<string> tokenize(const string& expression) {
     return tokens;
 }
 
-void applyOperation(vector <Fraction>& values, vector<string>& ops) {
+void applyOperation(std::vector <Fraction>& values, std::vector<std::string>& ops) {
     if (ops.empty() || values.size() < 2) {
-        throw runtime_error("Not enough operands for operator " + (ops.empty() ? "" : ops.back()));
+        throw std::runtime_error("Not enough operands for operator " + (ops.empty() ? "" : ops.back()));
     }
 
-    string op = ops.back();
+    std::string op = ops.back();
     ops.pop_back();
 
     Fraction b = values.back(); values.pop_back();
@@ -254,13 +252,13 @@ Fraction decimalToFraction(double decimal, int max_denominator = 1000) {
 //Helping functions
 
 
-void parseNumber(const string& token, vector<Fraction>& values) {
-    if (token.find('.') != string::npos) {
+void parseNumber(const std::string& token, std::vector<Fraction>& values) {
+    if (token.find('.') != std::string::npos) {
         // decimal handling
         double num = stod(token);
         values.push_back(decimalToFraction(num));
     }
-    else if (token.find('/') != string::npos) {
+    else if (token.find('/') != std::string::npos) {
         // fraction handling
         size_t slash = token.find('/');
         int num = stoi(token.substr(0, slash));
@@ -274,14 +272,14 @@ void parseNumber(const string& token, vector<Fraction>& values) {
 }
 
 // Parser with operation prior handling
-Fraction evaluateExpression(const string& expr) {
-    vector<string> tokens = tokenize(expr);
-    vector<Fraction> values;
-    vector<string> ops;
+Fraction evaluateExpression(const std::string& expr) {
+    std::vector<std::string> tokens = tokenize(expr);
+    std::vector<Fraction> values;
+    std::vector<std::string> ops;
     
     try {
         for (size_t i = 0; i < tokens.size(); ++i) {
-            const string& token = tokens[i];
+            const std::string& token = tokens.at(i);
 
             if (token == "+" || token == "-" || token == "*" || token == "/") {
                 //un minus (is "-" is on start or after "(")
@@ -302,7 +300,7 @@ Fraction evaluateExpression(const string& expr) {
                 while (!ops.empty() && ops.back() != "(") {
                     applyOperation(values, ops);
                 }
-                if (ops.empty()) throw runtime_error("Mismatched parentheses");
+                if (ops.empty()) throw std::runtime_error("Mismatched parentheses");
                 ops.pop_back(); //deleting "("
             }
             else {
@@ -312,29 +310,29 @@ Fraction evaluateExpression(const string& expr) {
         }
 
         while (!ops.empty()) {
-            if (ops.back() == "(") throw runtime_error("Missmatched parentheses");
+            if (ops.back() == "(") throw std::runtime_error("Missmatched parentheses");
             applyOperation(values, ops);
         }
 
         if (values.size() != 1) {
-            throw runtime_error("Invalid expression - missing operations or operands");
+            throw std::runtime_error("Invalid expression - missing operations or operands");
         }
 
         return values.back();
     }
-    catch (const exception& e) {
-        throw runtime_error(string("Expression error: ") + e.what());
+    catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Expression error: ") + e.what());
     }
 }
 
 //main func to work with console
 void consoleInterface() {
-    string input;
-    cout << "Fraction calculator (type 'exit' to quit)\n";
+    std::string input;
+    std::cout << "Fraction calculator (type 'exit' to quit)\n";
 
     while (true) {
-        cout << ">";
-        getline(cin, input);
+        std::cout << ">";
+        std::getline(std::cin, input);
         if (input == "exit") break;
         if (input == "history") {
             HistoryManager::displayHistory();
@@ -343,10 +341,10 @@ void consoleInterface() {
 
         try {
             Fraction result = evaluateExpression(input);
-            cout << "Result: " << result << " = " << result.toDecimal() << "\n";
+            std::cout << "Result: " << result << " = " << result.toDecimal() << "\n";
         }
-        catch (const exception& e) {
-            cerr << "Error: " << e.what() << "\n";
+        catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << "\n";
         }
     }
 }
