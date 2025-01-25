@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <cmath>
 #include <vector>
+#include <algorithm>
+#include <limits>
 #include <fstream>
 
 using namespace std;
@@ -168,17 +170,193 @@ public:
     }
 };
 
+//helping functions for parsing
+vector<string> tokenize(const string& expression) {
+    vector<string> tokens;
+    string token;
+    bool readingNumber = false;
+    for (size_t i = 0; i < expression.size(); ++i) {
+        char c = expression[i];
+
+        if (isdigit(c) || c == '/' || c == '.' || (c == '-' && (i == 0 || expression[i - 1] == '('))) {
+            //adding symbols to number/fraction
+            token += c;
+            readingNumber = true;
+        }
+        else {
+            if (readingNumber) {
+                tokens.push_back(token);
+                token.clear();
+                readingNumber = false;
+            }
+            if (!isspace(c)) {
+                tokens.push_back(string(1, c));
+            }
+        }
+    }
+
+    if (readingNumber) {
+        tokens.push_back(token);
+    }
+    
+    return tokens;
+}
+
+void applyOperation(vector <Fraction>& values, vector<string>& ops) {
+    if (ops.empty() || values.size() < 2) {
+        throw runtime_error("Not enough operands for operator " + (ops.empty() ? "" : ops.back()));
+    }
+
+    string op = ops.back();
+    ops.pop_back();
+
+    Fraction b = values.back(); values.pop_back();
+    Fraction a = values.back(); values.pop_back();
+
+    if (op == "+") values.push_back(a + b);
+    else if (op == "-") values.push_back(a - b);
+    else if (op == "*") values.push_back(a * b);
+    else if (op == "/") values.push_back(a / b);
+}
+
+
+//decimal to fraction convert (by Farey alghoritm)
+Fraction decimalToFraction(double decimal, int max_denominator = 1000) {
+    int sign = decimal < 0 ? -1 : 1; 
+    decimal = fabs(decimal);
+
+    int a = 0, b = 1;
+    int c = 1, d = 1;
+
+    while (b <= max_denominator && d <= max_denominator) {
+        double mediant = (a + c) / static_cast<double>(b + d);
+        if (decimal == mediant) {
+            if (b + d <= max_denominator)
+                return Fraction(sign * (a + c), b + d);
+            else if (b > d)
+                return Fraction(sign * c, d);
+            else
+                return Fraction(sign * a, b);
+        }
+        else if (decimal > mediant) {
+            a += c;
+            b += d; 
+        }
+        else {
+            c += a; 
+            d += b;
+        }
+    }
+
+    if (b > max_denominator)
+        return Fraction(sign * c, d);
+    else
+        return Fraction(sign * a, b);
+}
+
+//Helping functions
+
+
+void parseNumber(const string& token, vector<Fraction>& values) {
+    if (token.find('.') != string::npos) {
+        // decimal handling
+        double num = stod(token);
+        values.push_back(decimalToFraction(num));
+    }
+    else if (token.find('/') != string::npos) {
+        // fraction handling
+        size_t slash = token.find('/');
+        int num = stoi(token.substr(0, slash));
+        int den = stoi(token.substr(slash + 1));
+        values.push_back(Fraction(num, den));
+    }
+    else {
+        //int value
+        values.push_back(Fraction(stoi(token), 1));
+    }
+}
+
+// Parser with operation prior handling
+Fraction evaluateExpression(const string& expr) {
+    vector<string> tokens = tokenize(expr);
+    vector<Fraction> values;
+    vector<string> ops;
+    
+    try {
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            const string& token = tokens[i];
+
+            if (token == "+" || token == "-" || token == "*" || token == "/") {
+                //un minus (is "-" is on start or after "(")
+                if (token == "-" && (values.empty() || (!ops.empty() && ops.back() == "("))) {
+                    values.push_back(Fraction(0, 1)); // addin zero as left operand
+                }
+
+                //priority operations handle
+                while (!ops.empty() && ops.back() != "(" && ((token == "+" || token == "-") && (ops.back() == "*" || ops.back() == "/"))) {
+                    applyOperation(values, ops);
+                }
+                ops.push_back(token);
+            }
+            else if (token == "(") {
+                ops.push_back(token);
+            }
+            else if (token == ")") {
+                while (!ops.empty() && ops.back() != "(") {
+                    applyOperation(values, ops);
+                }
+                if (ops.empty()) throw runtime_error("Mismatched parentheses");
+                ops.pop_back(); //deleting "("
+            }
+            else {
+                //parsing values and fractions
+                parseNumber(token, values);
+            }
+        }
+
+        while (!ops.empty()) {
+            if (ops.back() == "(") throw runtime_error("Missmatched parentheses");
+            applyOperation(values, ops);
+        }
+
+        if (values.size() != 1) {
+            throw runtime_error("Invalid expression - missing operations or operands");
+        }
+
+        return values.back();
+    }
+    catch (const exception& e) {
+        throw runtime_error(string("Expression error: ") + e.what());
+    }
+}
+
+//main func to work with console
+void consoleInterface() {
+    string input;
+    cout << "Fraction calculator (type 'exit' to quit)\n";
+
+    while (true) {
+        cout << ">";
+        getline(cin, input);
+        if (input == "exit") break;
+        if (input == "history") {
+            HistoryManager::displayHistory();
+            continue;
+        }
+
+        try {
+            Fraction result = evaluateExpression(input);
+            cout << "Result: " << result << " = " << result.toDecimal() << "\n";
+        }
+        catch (const exception& e) {
+            cerr << "Error: " << e.what() << "\n";
+        }
+    }
+}
+
 int main()
 {
-    Fraction a(1, 2);
-    Fraction b(1, 2);
-
-    Fraction c = a + b;
-    Fraction d = a * b;
-
-    HistoryManager::displayHistory();
-    HistoryManager::saveToFile("operations_history.txt");
-
+    consoleInterface();
     return 0;
 }
 
